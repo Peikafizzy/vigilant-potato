@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户数据访问映射 -->
+<mapper namespace="com.gok.pboot.mapper.AccountMapper">
+    <sql id="select_field">
+            nickname AS "nickname",
+            id AS "id",
+            phone AS "phone",
+            username AS "username",
+            def_type AS  "defType",
+            def_tenant AS  "defTenant",
+             def_student AS  "defStudent",
+            ctime
+    </sql>
+
+    <select id="getByUsername" resultType="com.gok.pboot.auth.Account">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_account
+        WHERE
+        username = #{username} and del_flag=0
+    </select>
+    <select id="getByUsernameAndPhone" resultType="com.gok.pboot.auth.Account">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_account
+        WHERE
+        username = #{username} and del_flag=0 and phone=#{phone}
+    </select>
+
+    <select id="findAccountsByNickname" resultType="com.gok.pboot.auth.Account">
+        <bind name="nickname" value='nickname + "%"'/>
+        select id, nickname from tb_account
+        where nickname LIKE #{nickname} and del_flag=0
+    </select>
+
+    <select id="find" resultType="com.gok.pboot.auth.Account">
+        SELECT
+        <include refid="select_field"/>
+        from tb_account
+        <where>
+            del_flag =0 AND type = #{filter.type}
+            <if test="filter.username != null and filter.username != ''">
+                AND username = #{filter.username}
+            </if>
+            <if test="filter.phone != null and filter.phone != ''">
+                <bind name="phone" value='"%" + filter.phone + "%" '/>
+                AND phone like #{phone}
+            </if>
+            <if test="filter.nickname != null and filter.nickname != ''">
+                <bind name="nickname" value='"%" + filter.nickname + "%" '/>
+                AND nickname LIKE #{nickname}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <select id="getCountByPhone" resultType="java.lang.Integer">
+      select count(id) from tb_account where phone = #{phone} and del_flag = 0
+    </select>
+
+    <delete id="delBatchByLogic">
+        UPDATE tb_account
+        SET del_flag = 1
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+
+    <update id="setOpenIdByUsername">
+        UPDATE
+        tb_account
+        SET
+        openid = #{openId},mtime=now()
+        WHERE
+        username = #{username}
+    </update>
+
+    <update id="updateEntity">
+        UPDATE
+        tb_account
+        <trim prefix="set" suffixOverrides=",">
+        <if test="gesturePassword!=null and gesturePassword!=''">
+            gesture_password = #{gesturePassword},
+        </if>
+        <if test="fingerPassword!=null and fingerPassword!=''">
+            finger_password = #{fingerPassword},
+        </if>
+        <if test="password!=null and password!=''">
+            password = #{password},
+        </if>
+        <if test="openid!=null and openid!=''">
+            openid = #{openid},
+        </if>
+        <if test="phone!=null and phone!=''">
+            phone = #{phone},
+        </if>
+        </trim>
+        WHERE
+        id = #{id}
+    </update>
+
+
+    <insert id="insertBatch">
+        INSERT INTO tb_account(id, username, password, gesture_password,
+                  finger_password, nickname, phone, ctime,
+                  creator_id, openid, def_type,def_tenant) VALUES
+        <foreach collection="accounts" item="user" separator=",">
+            (#{user.id}, #{user.username}, #{user.password}, #{user.gesturePassword},
+            #{user.fingerPassword}, #{user.nickname}, #{user.phone}, current_timestamp(),
+            ${@com.gok.pboot.base.UserUtils@getUserId()},#{user.openid},#{user.defType}, #{user.defTenant}
+            )
+        </foreach>
+    </insert>
+    <update id="updatePassword">
+        UPDATE
+          tb_account
+        SET
+          password = #{password}
+        WHERE
+          id=#{id}
+    </update>
+    <update id="updatePhone">
+        UPDATE
+          tb_account
+        SET
+        phone = #{phone}
+        WHERE
+           id=#{id}
+    </update>
+    <select id="findByOpenId" resultType="com.gok.pboot.auth.Account">
+        SELECT
+        *
+        from tb_account
+        <where>
+            del_flag =0 AND openid = #{openId}
+        </where>
+        ORDER BY id DESC
+    </select>
+    <select id="getByPhoneList" resultType="com.gok.pboot.auth.Account">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_account a
+        WHERE
+        a.del_flag=0 and a.phone in
+        <foreach collection="list" item="phone" open="(" separator="," close=")">
+            #{phone}
+        </foreach>
+    </select>
+</mapper>

@@ -1,0 +1,17 @@
+server:
+  port: 8699
+spring:
+  application:
+    name: xt-service
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        refresh:
+          enabled: false
+        group: gok-base-cloud
+  profiles:
+    active: test

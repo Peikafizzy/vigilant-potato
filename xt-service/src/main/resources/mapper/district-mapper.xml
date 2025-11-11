@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户数据访问映射 -->
+<mapper namespace="com.gok.pboot.district.mapper.DistrictMapper">
+
+
+    <select id="listDistrictByParentId" resultType="com.gok.pboot.district.po.DistrictPo">
+        SELECT district_code,district_name
+        FROM tb_district
+        where parent_id = #{parentId}
+    </select>
+    <select id="listDistrictByIds" resultType="com.gok.pboot.district.po.DistrictPo">
+        SELECT district_code,district_name
+        FROM tb_district
+        WHERE district_id in
+        <foreach collection="districtIds" item="districtId" index="index" open="(" separator="," close=")">
+            #{districtId}
+        </foreach>
+    </select>
+    <select id="getDistrictByCode" resultType="com.gok.pboot.district.po.DistrictPo">
+        SELECT district_code,district_name
+        FROM tb_district
+        WHERE district_id = #{districtCode}
+    </select>
+    <select id="listProvince" resultType="com.gok.pboot.district.po.DistrictPo">
+        SELECT district_code,district_name
+        FROM tb_district
+        WHERE district_level in (0, 1)
+        order by district_id
+    </select>
+
+    <select id="getParentIdByCode" resultType="java.lang.String">
+        SELECT parent_id
+        FROM tb_district
+        WHERE district_code = #{districtCode}
+    </select>
+
+    <select id="listDistrictCodeByDistrictName" resultType="java.lang.String">
+        select district_code
+        from tb_district
+        where district_name like concat('%',#{districtName},'%')
+    </select>
+</mapper>

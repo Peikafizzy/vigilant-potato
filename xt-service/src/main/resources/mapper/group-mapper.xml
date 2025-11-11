@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组数据访问映射 -->
+<mapper namespace="com.gok.pboot.mapper.GroupMapper">
+
+    <select id="getUserGroups" resultType="com.gok.pboot.auth.Group">
+        SELECT
+          g.id as "id",
+          g.name as "name",
+          g.remark as "remark",
+          g.unit_id as unitId,
+          g.data_scope as dataScope
+        FROM
+          tb_group g
+        LEFT JOIN
+          tb_group_user gu ON g.id = gu.fk_group_id
+        LEFT JOIN
+          tb_user u ON u.id = gu.fk_user_id
+        WHERE
+          u.id = #{userId}
+    </select>
+
+    <select id="getUserGroupList" resultType="com.gok.pboot.auth.Group">
+        SELECT
+        g.id as "id",
+        g.name as "name",
+        g.remark as "remark",
+        g.unit_id as unitId,
+        g.data_scope as dataScope,
+        gu.fk_user_id as userId
+        FROM
+        tb_group g
+        INNER JOIN
+        tb_group_user gu ON g.id = gu.fk_group_id
+        WHERE g.group_type=1 and status=1 and g.tenant_id =${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and gu.fk_user_id in
+        <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+    </select>
+
+    <select id="getUserGroupListByUserId" parameterType="long" resultType="java.lang.Long">
+        select fk_group_id id from tb_group_user t where fk_user_id = #{id}
+    </select>
+
+    <select id="find" resultType="com.gok.pboot.auth.Group">
+        SELECT
+        id as "id",
+        name as "name",
+        remark as "remark",
+        unit_id as unitId,
+        data_scope as dataScope,
+        status
+        FROM
+        tb_group
+        where
+        group_type=1
+        <if test="filter.name != null and filter.name != ''">
+            <bind name="name" value=" '%' + filter.name + '%' "/>
+            and name LIKE #{name}
+        </if>
+        <if test="filter.status != null">
+            and status=#{filter.status}
+        </if>
+        <if test="filter.tenantId != null">
+            and tenant_id = #{filter.tenantId}
+        </if>
+        <!--<if test="filter.superAdmin == null">-->
+        <!--and ${filter.ds}-->
+        <!--</if>-->
+        ORDER BY id DESC
+        <!--<if test="filter.limit.first != null and filter.limit.last != null">-->
+        <!--LIMIT #{filter.limit.last} offset #{filter.limit.first}-->
+        <!--</if>-->
+    </select>
+
+    <select id="findGroupList" parameterType="com.gok.pboot.auth.vo.GroupSearchVO"
+            resultType="com.gok.pboot.auth.Group">
+        SELECT
+        id as "id",
+        name as "name",
+        remark as "remark",
+        unit_id as unitId,
+        data_scope as dataScope
+        FROM tb_group
+        where group_type=1 and tenant_id =${@com.gok.pboot.base.UserUtils@getTenantId()}
+        <if test="status != null">
+            and status=#{status}
+        </if>
+        ORDER BY id DESC
+    </select>
+    <select id="findGroupByIds" resultType="com.gok.pboot.auth.Group">
+        SELECT
+        id as "id",
+        name as "name",
+        remark as "remark",
+        unit_id as unitId,
+        data_scope as dataScope
+        FROM tb_group
+        where tenant_id =${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+    <select id="isNameUnique" resultType="boolean">
+        SELECT
+          count(id)
+        FROM
+          tb_group
+        WHERE group_type=1 and
+          name = #{name} and tenant_id = ${@com.gok.pboot.base.UserUtils@getTenantId()}
+    </select>
+
+    <delete id="deleteUserAssociation">
+        DELETE FROM tb_group_user WHERE fk_group_id = #{id}
+    </delete>
+
+    <delete id="deleteResourceAssociation">
+        DELETE FROM tb_group_resource WHERE fk_group_id = #{id}
+    </delete>
+
+    <insert id="insertUserAssociation">
+        INSERT INTO
+        tb_group_user(fk_user_id,fk_group_id)
+        VALUES
+        <foreach collection="userIds" item="userId" index="index" separator=",">
+            (#{userId}, #{id})
+        </foreach>
+    </insert>
+
+    <insert id="insertResourceAssociation">
+        INSERT INTO
+        tb_group_resource(fk_resource_id,fk_group_id)
+        VALUES
+        <foreach collection="resourceIds" item="resourceId" index="index" separator=",">
+            (#{resourceId}, #{id})
+        </foreach>
+    </insert>
+
+    <insert id="deleteResourceListAssociation">
+        delete from
+        tb_group_resource
+        where fk_resource_id in
+        <foreach collection="resourceIds" item="resourceId" separator="," open="(" close=")">
+            #{resourceId}
+        </foreach>
+    </insert>
+
+    <insert id="insertUnitAssociation">
+        insert into tb_group_unit(unit_id, group_id) values
+        <foreach collection="unitIds" item="unitId" index="index" separator=",">
+            (#{unitId}, #{id})
+        </foreach>
+    </insert>
+
+    <delete id="deleteUnitAssociation">
+        DELETE FROM tb_group_unit WHERE group_id = #{id}
+    </delete>
+
+    <select id="getSuperGroupByTenantId" resultType="com.gok.pboot.auth.Group">
+         SELECT
+          g.id as "id",
+          g.name as "name",
+          g.remark as "remark",
+          g.unit_id as unitId,
+          g.data_scope as dataScope
+        FROM
+          tb_group g
+        WHERE
+          g.tenant_id = #{tenantId}
+          and g.group_type=#{groupType}
+
+    </select>
+
+</mapper>

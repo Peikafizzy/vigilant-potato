@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户数据访问映射 -->
+<mapper namespace="com.gok.pboot.mapper.UserMapper">
+    <sql id="select_field">
+            a.id AS "id",
+            a.state AS "state",
+            a.unit_id unitId,
+            a.account_id AS "accountId",
+            a.type,
+            a.ctime,
+            a.creator_id AS "creatorId",
+            a.account_id AS "accountId",
+            a.tenant_no AS "tenantNo",
+            a.tenant_id AS "tenantId",
+            b.nickname AS "nickname",
+            b.password AS "password",
+            b.gesture_password AS "gesturePassword",
+            b.finger_password AS "fingerPassword",
+            b.phone,
+            b.def_type AS "defType",
+            b.def_student AS "defStudent",
+            b.username AS "username",
+            b.def_tenant AS "defTenant"
+    </sql>
+
+    <sql id="joinSql" >
+         join tb_account b on b.id= a.account_id
+    </sql>
+
+
+    <sql id="getLoginUserCommon">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE
+        ( b.username = #{username} or b.phone=#{username}) and a.del_flag=0 and a.tenant_no = #{tenantNo} and a.state=1
+    </sql>
+
+
+    <select id="getLoginUser" resultType="com.gok.pboot.auth.User">
+        <include refid="getLoginUserCommon"/>
+            and a.type = #{type}
+    </select>
+
+    <select id="getUsersByUsernameAndTenantNo" resultType="com.gok.pboot.auth.User">
+        <include refid="getLoginUserCommon"/>
+    </select>
+    <select id="getUsersByPhoneAndTenantNo" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE
+        b.phone = #{phone} and a.del_flag=0 and a.tenant_no = #{tenantNo} and a.state=1
+    </select>
+
+    <select id="findUsers" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE b.openid = #{openId} and a.del_flag=0
+        <if test="type != null">
+            and a.type = #{type}
+        </if>
+    </select>
+
+
+    <select id="selectBatchIds"  resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE  a.del_flag=0 and  a.tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and a.id in
+        <foreach collection="coll" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+
+    <select id="selectById" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE
+        a.id = #{id} and a.del_flag=0
+    </select>
+
+    <select id="getByPhone" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE
+         b.phone = #{phone} and a.del_flag=0
+        <if test="id != null">
+            and a.id!=#{id}
+        </if>
+    </select>
+    <select id="getParentsByPhoneList" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE
+        a.del_flag=0 and  a.type=4 and b.phone in
+        <foreach collection="list" item="phone" open="(" separator="," close=")">
+            #{phone}
+        </foreach>
+    </select>
+
+    <select id="find" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        from tb_user a
+        <include refid="joinSql"/>
+        <where>
+            a.del_flag =0
+            AND a.tenant_id = #{filter.tenantId}
+            <if test="filter.type != null and filter.type != ''">
+                AND a.type = #{filter.type}
+            </if>
+            <if test="filter.username != null and filter.username != ''">
+                AND b.username = #{filter.username}
+            </if>
+            <if test="filter.phone != null and filter.phone != ''">
+                <bind name="phone" value='"%" + filter.phone + "%" '/>
+                AND b.phone like #{phone}
+            </if>
+            <if test="filter.nickname != null and filter.nickname != ''">
+                <bind name="nickname" value='"%" + filter.nickname + "%" '/>
+                AND b.nickname LIKE #{nickname}
+            </if>
+
+            <if test="filter.state != null">
+                AND a.state = #{filter.state}
+            </if>
+
+            <if test="filter.unitId != null">
+                AND a.unit_id = #{filter.unitId}
+            </if>
+            <if test="filter.groupId != null">
+                AND exists (select * from tb_group_user where a.id=fk_user_id and fk_group_id=#{filter.groupId})
+            </if>
+        </where>
+        ORDER BY a.id DESC
+    </select>
+
+
+    <select id="findUserByOrgId" resultType="com.gok.pboot.auth.User">
+        SELECT
+        <include refid="select_field"/>
+        FROM tb_user WHERE org_id = #{orgId}
+    </select>
+
+    <delete id="deleteGroupAssociation">
+        DELETE FROM tb_group_user WHERE fk_user_id = #{id}
+    </delete>
+
+    <delete id="delBatchByLogic">
+        UPDATE tb_user
+        SET del_flag = 1
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <update id="updatePassword">
+        UPDATE
+          tb_account
+        SET
+          password = #{password}
+        WHERE
+          id =(select account_id from tb_user where id=#{id})
+    </update>
+
+
+    <update id="updatePhone">
+        UPDATE
+          tb_account
+        SET
+        phone = #{phone}
+        WHERE
+        id =(select account_id from tb_user where id=#{id})
+    </update>
+
+    <update id="updatePass">
+        UPDATE
+        tb_user
+        SET
+        <if test="entity.gesturePassword!=null and entity.gesturePassword!=''">
+            gesture_password = #{entity.gesturePassword}
+        </if>
+        <if test="entity.fingerPassword!=null and entity.fingerPassword!=''">
+            finger_password = #{entity.fingerPassword}
+        </if>
+        WHERE
+        id = #{entity.id}
+    </update>
+    <update id="updateOpenidByUserId">
+        UPDATE
+            tb_account
+        SET
+            openid = #{openid}
+        WHERE
+            id =(select account_id from tb_user where id=#{id})
+    </update>
+
+    <insert id="insertGroupAssociation">
+        INSERT INTO
+        tb_group_user(fk_user_id,fk_group_id)
+        VALUES
+        <foreach collection="groups" item="group" index="index" separator=",">
+            (#{id}, #{group.id})
+        </foreach>
+    </insert>
+    <insert id="insertBatch">
+        INSERT INTO tb_user(id,state,
+        unit_id,ctime,creator_id,
+        mtime, modifier_id,del_flag,
+        tenant_id,tenant_no, type,account_id) VALUES
+        <foreach collection="users" item="user" separator=",">
+            (
+            #{user.id}, #{user.state},
+            #{user.unitId},current_timestamp(),#{user.creatorId},NULL,
+            NULL,0,#{user.tenantId},#{user.tenantNo},#{user.type},#{user.accountId}
+            )
+        </foreach>
+    </insert>
+
+    <select id="getUserPerms" resultType="string">
+        SELECT
+            t2.permission
+        FROM
+            tb_group_user t4,
+            tb_resource t2,
+            tb_group_resource t1
+        WHERE
+            t4.fk_user_id = '5' AND t2.platform_type IN (1,2) AND
+            t4.fk_group_id = t1.fk_group_id AND
+            t2.id = t1.fk_resource_id
+	    AND t2.fk_parent_id IS NOT NULL
+    </select>
+
+    <select id="getUserList" parameterType="com.gok.pboot.auth.vo.UserSearchVO"
+            resultType="com.gok.pboot.auth.vo.UserVO">
+        select a.id ,
+        a.account_id,
+        b.nickname,
+        b.phone,
+        b.username,
+        a.state,
+        a.unit_id AS unitId,
+        u.name AS unitName,
+        a.ctime,
+        a.tenant_id AS tenantId,
+        a.tenant_no AS tenantNo
+        FROM
+        tb_user a
+        JOIN tb_account b on b.id = a.account_id
+        LEFT JOIN tb_unit u on a.unit_id=u.id
+        WHERE a.del_flag=0
+        <if test="null!= idList and idList.size() > 0 ">
+            and a.id in
+            <foreach collection="idList" item="ids" open="(" close=")" separator=",">
+                #{ids}
+            </foreach>
+        </if>
+        <if test="null!= phoneList and phoneList.size() > 0 ">
+            and b.phone in
+            <foreach collection="phoneList" item="phone" open="(" close=")" separator=",">
+                #{phone}
+            </foreach>
+        </if>
+        <if test="null!= usernameList and usernameList.size() > 0 ">
+            and b.username in
+            <foreach collection="usernameList" item="username" open="(" close=")" separator=",">
+                #{username}
+            </foreach>
+        </if>
+        <if test="null!= unitIds and unitIds.size() > 0 ">
+            and a.unit_id in
+            <foreach collection="unitIds" item="ids" open="(" close=")" separator=",">
+                #{ids}
+            </foreach>
+        </if>
+        <if test="tenantId != null">
+            and a.tenant_id=#{tenantId}
+        </if>
+        <if test="type != null">
+            and a.type=#{type}
+        </if>
+        <if test="isUnit">
+            and a.unit_id is not null
+        </if>
+    </select>
+
+    <select id="findByUnitId" resultType="com.gok.pboot.auth.vo.UserVO">
+        select a.id,
+        b.nickname,
+        a.state,
+        b.phone,
+        b.username,
+        a.unit_id AS unitId,
+        a.ctime,
+        a.tenant_id AS tenantId,
+        a.tenant_no AS tenantNo
+        FROM
+        tb_user a
+        <include refid="joinSql"/>
+        WHERE a.del_flag=0
+        and a.state=1
+        and a.unit_id=#{unitId}
+        and a.tenant_id=#{tenantId}
+        <if test="userType!=null">
+            and a.type=#{userType}
+        </if>
+    </select>
+
+    <select id="findUserByGroupId" resultType="com.gok.pboot.auth.vo.UserVO">
+        select u.id , a.nickname
+        FROM tb_user u
+        inner join tb_account a on a.id=u.account_id
+        inner join tb_group_user gu on u.id=gu.fk_user_id
+        WHERE  u.del_flag=0 and u.state=1
+            and gu.fk_group_id=#{groupId}
+            and u.tenant_id= ${@com.gok.pboot.base.UserUtils@getTenantId()}
+            and u.type=#{type}
+    </select>
+
+    <select id="findByUnitParentIds" resultType="com.gok.pboot.auth.vo.UserVO">
+        select u.id,
+        a.nickname,
+        a.username,
+        u.unit_id AS unitId
+        FROM tb_user u
+        inner join tb_account a on u.account_id=a.id
+        inner join tb_unit tu on u.unit_id=tu.id
+        WHERE u.del_flag=0 and u.state=1
+        and u.tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()} and u.type=2
+        and tu.parent_id in
+        <foreach collection="unitIdList" item="parentId" open="(" close=")" separator=",">
+            #{parentId}
+        </foreach>
+    </select>
+    <insert id="saveGroupUser" parameterType="com.gok.pboot.auth.vo.GroupVO">
+        INSERT INTO
+        tb_group_user(fk_user_id,fk_group_id)
+        select id,#{id} from tb_user
+        where del_flag=0 and state=1 and tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and type=#{userType}
+        and id in
+        <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+    </insert>
+
+    <delete id="deleteGroupUser">
+        delete from tb_group_user where fk_group_id=#{groupId} and
+        fk_user_id in (select id from tb_user where tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and type=#{type})
+    </delete>
+
+
+    <select id="getOperationsUsers" resultType="com.gok.pboot.auth.vo.UserVO">
+      SELECT
+        id AS "id",
+        sex,
+        phone,
+        birthday,
+        avatar,
+        address,
+        unit_id unitId,
+        type
+      from tb_user
+        where tenant_id > 0
+        limit #{begin}, #{end}
+    </select>
+
+
+    <select id="findUsersByGroup" resultType="com.gok.pboot.auth.vo.UnitUserVO">
+        select u.id,u.unit_id,gr.fk_group_id as groupId,u.type
+        FROM tb_user u
+        left join tb_group_user gr on u.id=gr.fk_user_id
+        WHERE u.del_flag=0 and u.state=1
+        and u.tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and gr.fk_group_id in
+        <foreach collection="groupIdList" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="countTenantId" resultType="java.lang.Long">
+        select u.tenant_id
+        FROM tb_user u
+        WHERE u.del_flag=0 and u.state=1 and u.account_id=#{accountId}
+       group by u.tenant_id  order by ctime
+    </select>
+
+    <select id="findByTenantAndType" resultType="com.gok.pboot.auth.vo.UserVO">
+        select u.id,b.nickname,b.username,b.phone
+        FROM tb_user u inner join tb_account b on b.id= u.account_id
+        WHERE u.del_flag=0
+        and u.tenant_id=#{tenantId}  and u.type=#{type}
+    </select>
+
+
+    <select id="findByUserFilter" resultType="com.gok.pboot.auth.User">
+        SELECT
+        a.id,a.type,a.account_id,a.tenant_no,a.tenant_id
+        FROM
+        tb_user a
+        WHERE
+         a.del_flag=0
+        <if test="filter.tenantNo != null and filter.tenantNo != ''">
+            and a.tenant_no = #{filter.tenantNo}
+        </if>
+        <if test="filter.tenantId != null">
+            and a.tenant_id = #{filter.tenantId}
+        </if>
+        <if test="filter.accountId != null ">
+            and a.account_id=#{filter.accountId}
+        </if>
+        <if test="filter.type != null ">
+            and a.type=#{filter.type}
+        </if>
+    </select>
+    <update id="updateState">
+        UPDATE
+          tb_user
+        SET
+          state = #{filter.state}
+        WHERE
+         id in
+        <foreach collection="filter.ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="getUserMapByAccountIdList" resultType="com.gok.pboot.auth.User">
+        SELECT
+        a.id,a.type,a.account_id,a.tenant_no,a.tenant_id
+        FROM
+        tb_user a
+        WHERE
+        a.del_flag=0
+        and a.account_id in
+        <foreach collection="filter.accountIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        <if test="filter.type != null ">
+            and a.type=#{filter.type}
+        </if>
+    </select>
+    <select id="findByUnitIdAndGroupId" resultType="com.gok.pboot.auth.vo.UserVO">
+        select a.id,
+        b.nickname,
+        a.state,
+        b.phone,
+        b.username,
+        a.unit_id AS unitId,
+        a.ctime,
+        a.tenant_id AS tenantId,
+        a.tenant_no AS tenantNo
+        FROM
+        tb_user a
+        join tb_account b on b.id= a.account_id
+        left join tb_unit n on n.id = a.unit_id
+        left join tb_group_user gu on gu.fk_user_id = a.id
+        WHERE a.del_flag=0
+        and a.state=1
+        and a.unit_id=#{unitId}
+        and a.tenant_id=#{tenantId}
+        and gu.fk_group_id = #{groupId}
+        <if test="userType!=null">
+            and a.type=#{userType}
+        </if>
+    </select>
+    <select id="findByUnitIds" resultType="com.gok.pboot.auth.vo.UserVO">
+        select u.id,
+        a.nickname,
+        a.username,
+        u.unit_id AS unitId
+        FROM tb_user u
+        inner join tb_account a on u.account_id=a.id
+        inner join tb_unit tu on u.unit_id=tu.id
+        WHERE u.del_flag=0 and u.state=1
+        and tu.id in
+        <foreach collection="unitIdList" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

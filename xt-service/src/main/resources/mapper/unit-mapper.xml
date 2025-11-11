@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组数据访问映射 -->
+<mapper namespace="com.gok.pboot.mapper.UnitMapper">
+
+
+
+
+    <select id="findList" resultType="com.gok.pboot.auth.vo.UnitVO">
+        SELECT
+        t.id,t.parent_id parentId,t.type,
+        t.name,t.sort,t.state,t.remarks,tu.name as parentName
+        FROM tb_unit t
+        inner join tb_unit tu on t.parent_id=tu.id and t.tenant_id=tu.tenant_id
+        WHERE t.del_flag=0 and tu.del_flag=0
+        and t.tenant_id = ${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and t.parent_id=#{filter.parentId}
+        <if test="filter.name != null and filter.name != '' ">
+            <bind name="name" value=" '%' + filter.name + '%' " />
+            and t.name like #{name}
+        </if>
+        <if test="filter.status != null">
+            and t.state=#{filter.status}
+        </if>
+        order by t.sort asc
+    </select>
+
+    <select id="getList" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+        t.id,t.parent_id parentId,t.type,
+        t.name,t.sort,t.state,t.remarks, t.ctime, t.mtime, t.level, t.id as 'value'
+        FROM tb_unit t
+        WHERE t.del_flag=0
+        and t.tenant_id = ${@com.gok.pboot.base.UserUtils@getTenantId()}
+        <if test="filter.parentId != null">
+            and t.parent_id=#{filter.parentId}
+        </if>
+        <if test="filter.name != null and filter.name != '' ">
+            <bind name="name" value=" '%' + filter.name + '%' " />
+            and t.name like #{name}
+        </if>
+        <if test="filter.state != null">
+            and t.state=#{filter.state}
+        </if>
+        order by t.sort asc
+    </select>
+
+    <select id="getAllUnitList" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+            id,name
+        FROM tb_unit
+
+    </select>
+
+    <select id="findOrgByParentId" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+            id,
+            parent_id parentId,
+            org_code orgCode,
+            name,
+            sort,
+            area_id areaId,
+            code,
+            type,
+            master,
+            phone,
+            state,
+            remarks,
+            tenant_id tenantId
+        FROM
+            tb_unit
+        where parent_id = #{parentId}
+    </select>
+
+    <select id="findTwoLevelOrgByParentId" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+            t.id,
+            t.parent_id parentId,
+            t.org_code orgCode,
+            t.name,
+            t.sort,
+            t.area_id areaId,
+            t.code,
+            t.type,
+            t.master,
+            t.phone,
+            t.state,
+            t.remarks,
+            t.tenant_id tenantId
+        FROM
+            tb_unit t
+        where EXISTS (select 1 from tb_unit t1 where t1.parent_id = 0 and t1.id = t.parent_id)
+           or t.parent_id = 0
+    </select>
+
+    <select id="genOrgCode" resultType="string">
+        select LPAD(x.orgCode + 1, length(x.orgCode), '0')
+        from
+            (select max(org_code) orgCode from tb_unit where parent_id = #{parentId}) x
+    </select>
+
+    <select id="selectGroupUnit" resultType="com.gok.pboot.auth.Unit">
+        select tu.*, case when tgu.group_id is null then 0 else 1 end checked,
+               (select count(1) from tb_unit where parent_id = tu.id) leafCount
+        from
+            tb_unit tu
+                left join
+            (select group_id, unit_id from tb_group_unit where group_id = #{groupId}) tgu
+            on tu.id = tgu.unit_id
+    </select>
+
+    <select id="getCheckedUnitsByGroupId" resultType="java.lang.String">
+        select unit_id from tb_group_unit where group_id = #{groupId}
+    </select>
+
+    <select id="getUnits" resultType="com.gok.pboot.auth.Unit">
+        select tu.* ,IF(tgu.group_id is null,0,1) checked from
+        (select id,
+        parent_id parentId,
+        org_code orgCode,
+        name,
+        sort,
+        area_id areaId,
+        code,
+        type,
+        master,
+        phone,
+        state,
+        remarks
+        from tb_unit where
+        del_flag = #{filter.delFlag}
+        <if test="filter.ds != null and filter.ds != ''">
+            AND ${filter.ds}
+        </if>
+        <if test="filter.tenantId != null">
+            AND tenant_id = #{filter.tenantId}
+        </if>
+        ) tu
+        left join (select group_id, unit_id from tb_group_unit where group_id = #{filter.groupId}) tgu
+        on tu.id = tgu.unit_id
+        order by tu.orgCode
+
+    </select>
+
+    <select id="getById" resultType="com.gok.pboot.auth.vo.UnitVO">
+        SELECT
+            id,
+            parent_id parentId,
+            org_code orgCode,
+            name,
+            sort,
+            area_id areaId,
+            code,
+            type,
+            master,
+            phone,
+            state,
+            remarks,
+            tenant_id tenantId
+        FROM
+            tb_unit
+        where id = #{id}
+          and tenant_id=#{tenantId}
+    </select>
+
+    <select id="getUnitList" parameterType="com.gok.pboot.auth.vo.UnitSearchVO"
+            resultType="com.gok.pboot.auth.vo.UnitVO">
+        SELECT
+        id,
+        parent_id parentId,
+        org_code orgCode,
+        name,
+        sort,
+        area_id areaId,
+        code,
+        type,
+        master,
+        phone,
+        state,
+        remarks,
+        tenant_id tenantId
+        FROM
+        tb_unit
+        WHERE del_flag=0
+        <if test="tenantId != null">
+            and tenant_id=#{tenantId}
+        </if>
+        <if test="parentId != null">
+            and parent_id=#{parentId}
+        </if>
+        <if test="state != null">
+            and state=#{state}
+        </if>
+        <if test="null!= idList and idList.size() > 0 ">
+            and id in
+            <foreach collection="idList" item="ids" open="(" close=")" separator=",">
+                #{ids}
+            </foreach>
+        </if>
+
+    </select>
+
+    <select id="findByParentId" resultType="com.gok.pboot.auth.vo.UnitVO">
+        SELECT
+            id,
+            parent_id parentId,
+            org_code orgCode,
+            name,
+            sort,
+            area_id areaId,
+            code,
+            type,
+            master,
+            phone,
+            state,
+            remarks,
+            tenant_id tenantId
+        FROM
+            tb_unit
+        where del_flag=0 and parent_id = #{parentId} and tenant_id=#{tenantId}
+    </select>
+
+    <select id="findByParentIds2" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+        *
+        FROM
+        tb_unit
+        where del_flag=0 AND tenant_id = #{tenantId}
+        and parent_id in
+        <foreach collection="parentIds" item="id" index="index"
+                 open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="findByUserId" parameterType="com.gok.pboot.auth.vo.UnitSearchVO"
+            resultType="com.gok.pboot.auth.vo.UserVO">
+        SELECT
+        u.id,
+        tu.id as unitId,
+        tu.name as unitName
+        FROM
+        tb_unit tu
+        inner join tb_user u on tu.id=u.unit_id and tu.tenant_id=u.tenant_id
+        where u.type=2 and u.del_flag=0 and u.tenant_id=${@com.gok.pboot.base.UserUtils@getTenantId()}
+        <if test="userIdList != null and userIdList.size > 0">
+            and u.id in
+            <foreach collection="userIdList" item="userId" open="(" close=")" separator=",">
+                #{userId}
+            </foreach>
+        </if>
+    </select>
+    <select id="findByParentIds" resultType="com.gok.pboot.auth.Unit">
+        SELECT
+        *
+        FROM
+        tb_unit
+        where del_flag=0 AND tenant_id = ${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and parent_id in
+        <foreach collection="parentIds" item="id" index="index"
+                 open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="getUnitByNameAndId" resultType="com.gok.pboot.auth.Unit">
+        SELECT id
+
+        FROM
+            tb_unit
+        WHERE
+            name = #{name} and id != #{id}
+    </select>
+
+    <delete id="deleteUnitById">
+        delete from tb_unit where id in
+        <foreach collection="ids" item="id" index="index"
+                 open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="getUnitByParentIdAndId" resultType="com.gok.pboot.auth.Unit">
+        SELECT id
+        FROM
+            tb_unit
+        WHERE
+            parent_id = #{parentId} and id != #{id}
+    </select>
+
+    <select id="getUnitByName" resultType="com.gok.pboot.auth.Unit">
+        SELECT id
+
+        FROM
+            tb_unit
+        WHERE
+            `name` = #{name}
+    </select>
+
+    <select id="getListExport" resultType="com.gok.pboot.auth.vo.UnitExportVO">
+        SELECT t.name,t.state as status,tu.name as parentName
+        FROM tb_unit t
+        inner join tb_unit tu on t.parent_id=tu.id and t.tenant_id=tu.tenant_id
+        WHERE t.del_flag=0 and tu.del_flag=0
+        and t.tenant_id = ${@com.gok.pboot.base.UserUtils@getTenantId()}
+        and t.parent_id=#{filter.parentId}
+        <if test="filter.name != null and filter.name != '' ">
+            <bind name="name" value=" '%' + filter.name + '%' " />
+            and t.name like #{name}
+        </if>
+        <if test="filter.status != null">
+            and t.state=#{filter.status}
+        </if>
+        order by t.sort asc
+    </select>
+</mapper>

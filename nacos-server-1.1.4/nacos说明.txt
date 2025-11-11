@@ -1,0 +1,4 @@
+Nacos简介
+1.Nacos具备服务优雅上下线和流量管理（API+后台管理页面），而Eureka的后台页面仅供展示，需要使用api操作上下线且不具备流量管理功能。
+2.Nacos整合了注册中心、配置中心功能，可以替代Eureka和apollo
+3.Eureka2.0已经闭源，现在的spring cloud还是使用Eureka1.0

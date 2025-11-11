@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 资源数据访问映射 -->
+<mapper namespace="com.gok.pboot.mapper.ResourceMapper" >
+
+    <select id="getChildren" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+          id AS "id",
+          icon AS "icon",
+          component,
+          name AS "name",
+          permission AS "permission",
+          remark AS "remark",
+          sort AS "sort",
+          type AS "type",
+          value AS "value",
+          fk_parent_id AS "fkParentId",
+          tenant_id AS "tenantId",
+          resource_fk_id AS resourceFkId,
+          platform_type AS platformType
+        FROM
+          tb_resource
+        WHERE
+          fk_parent_id = #{id} and tenant_id = #{tenantId}
+    </select>
+
+
+    <select id="getAll" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+          id AS "id",
+          icon AS "icon",
+          component,
+          name AS "name",
+          permission AS "permission",
+          remark AS "remark",
+          sort AS "sort",
+          type AS "type",
+          value AS "value",
+          fk_parent_id AS "fkParentId",
+          tenant_id AS "tenantId",
+          resource_fk_id AS resourceFkId,
+          platform_type AS platformType
+        FROM
+          tb_resource
+         where  tenant_id = #{tenantId}
+        order by sort ASC
+    </select>
+
+    <select id="getUserResources" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+          r.id AS "id",
+          r.icon AS "icon",
+          r.name AS "name",
+          r.component,
+          r.permission AS "permission",
+          r.remark AS "remark",
+          r.sort AS "sort",
+          r.type AS "type",
+          r.value AS "value",
+          r.resource_fk_id AS resourceFkId,
+          r.fk_parent_id AS "fkParentId",
+          r.platform_type AS platformType
+        FROM
+          tb_resource r
+        LEFT JOIN
+          tb_group_resource gr ON gr.fk_resource_id = r.id
+        LEFT JOIN
+          tb_group g ON gr.fk_group_id = g.id
+        LEFT JOIN
+          tb_group_user gu ON gu.fk_group_id = g.id
+        LEFT JOIN
+          tb_user u ON gu.fk_user_id = u.id
+        WHERE
+          u.id = #{userId}
+        GROUP BY
+          r.id
+        ORDER BY
+          r.sort
+    </select>
+
+    <select id="getGroupResources" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+          r.id AS "id",
+          r.icon AS "icon",
+          r.name AS "name",
+          r.component,
+          r.permission AS "permission",
+          r.remark AS "remark",
+          r.sort AS "sort",
+          r.type AS "type",
+          r.value AS "value",
+          r.fk_parent_id AS "fkParentId",
+          r.resource_fk_id AS resourceFkId,
+          r.platform_type AS platformType
+        FROM
+          tb_resource r
+        LEFT JOIN
+            tb_group_resource gr ON gr.fk_resource_id = r.id
+        LEFT JOIN
+          tb_group g ON gr.fk_group_id = g.id
+        WHERE
+          g.id = #{groupId}
+    </select>
+
+    <!--<select id="isCodeUnique" resultType="boolean">-->
+        <!--SELECT-->
+          <!--count(id)-->
+        <!--FROM-->
+          <!--tb_resource-->
+        <!--WHERE-->
+          <!--code = #{code}-->
+    <!--</select>-->
+
+    <delete id="deleteGroupAssociation">
+        DELETE FROM tb_group_resource WHERE fk_resource_id = #{id}
+    </delete>
+
+    <select id="selectGroupResources" resultType="com.gok.pboot.auth.Resource">
+        select tr.*,IF(tgr.fk_group_id is null,0,1) checked,
+               (select count(1) from tb_resource where fk_parent_id = tr.id) leafCount
+        from
+             tb_resource tr
+        left join
+             (select fk_resource_id, fk_group_id from tb_group_resource where fk_group_id = #{groupId}) tgr
+         on tr.id = tgr.fk_resource_id
+      where tr.tenant_id=#{tenantId}
+        <if test="isTenant != null">
+            <choose>
+                <when test="isTenant">
+                    and tr.platform_type in(1,3)
+                </when>
+                <otherwise>
+                    and tr.platform_type in(1,2)
+                </otherwise>
+            </choose>
+        </if>
+      order by tr.sort ASC
+    </select>
+
+    <select id="getResourceByGroupIds" resultType="java.lang.String">
+        select fk_resource_id from tb_group_resource where fk_group_id = #{groupId} and tenant_id=#{tenantId}
+    </select>
+
+    <select id="findByIdList" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+          r.id AS "id",
+          r.icon AS "icon",
+          r.name AS "name",
+          r.component,
+          r.permission AS "permission",
+          r.remark AS "remark",
+          r.sort AS "sort",
+          r.type AS "type",
+          r.value AS "value",
+          r.fk_parent_id AS "fkParentId",
+          r.resource_fk_id AS resourceFkId,
+          r.platform_type AS platformType
+        FROM
+          tb_resource r
+        WHERE
+         id in
+        <foreach collection="idList" item="ids" open="(" close=")" separator=",">
+            #{ids}
+        </foreach>
+        <if test="isTenant != null">
+            <choose>
+                <when test="isTenant">
+                   and r.platform_type in(1,3)
+                </when>
+                <otherwise>
+                    and r.platform_type in(1,2)
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+    <delete id="deleteByTenantId">
+        delete from tb_resource where tenant_id=#{tenantId}
+    </delete>
+
+    <delete id="deleteByIdsAndTenantId" >
+        delete from tb_resource where tenant_id=#{tenantId}
+       and  id in
+        <foreach collection="idList" item="ids" open="(" close=")" separator=",">
+            #{ids}
+        </foreach>
+    </delete>
+
+    <insert id="batchSave">
+        insert into tb_resource(
+        `id`, `component`, `permission`,
+              `remark`,`sort`,`name`,`type`,`value`,
+              `fk_parent_id`,`icon`,`tenant_id`,platform_type,resource_fk_id
+        )VALUES
+        <foreach collection="saveList" item="item" separator=",">
+            (
+            #{item.id},#{item.component},#{item.permission} ,#{item.remark} ,#{item.sort} ,#{item.name} ,#{item.type} ,
+            #{item.value}  ,#{item.fkParentId}  , #{item.icon}  ,#{item.tenantId},#{item.platformType},#{item.resourceFkId}
+            )
+        </foreach>
+    </insert>
+
+    <select id="getCheckedResources" resultType="com.gok.pboot.auth.Resource">
+        SELECT DISTINCT
+        r.id AS "id",
+        r.icon AS "icon",
+        r.name AS "name",
+        r.component,
+        r.permission AS "permission",
+        r.remark AS "remark",
+        r.sort AS "sort",
+        r.type AS "type",
+        r.value AS "value",
+        r.resource_fk_id AS resourceFkId,
+        r.fk_parent_id AS "fkParentId",
+        (case when dr.id is null then 0 else 1 end) as checked,
+        (select count(1) from tb_resource where fk_parent_id = r.id) leafCount
+        FROM
+        tb_resource r
+        left join tb_resource dr on r.id=dr.resource_fk_id and dr.tenant_id=#{tenantId}
+        WHERE r.tenant_id=#{defaultTenantId}
+        <if test="isTenant != null">
+            <choose>
+                <when test="isTenant">
+                    and r.platform_type in(1,3)
+                </when>
+                <otherwise>
+                    and r.platform_type in(1,2)
+                </otherwise>
+            </choose>
+        </if>
+        order by r.sort ASC
+    </select>
+
+    <select id="getByQuery" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+        r.id AS "id",
+        r.icon AS "icon",
+        r.name AS "name",
+        r.component,
+        r.permission AS "permission",
+        r.remark AS "remark",
+        r.sort AS "sort",
+        r.type AS "type",
+        r.value AS "value",
+        r.fk_parent_id AS "fkParentId",
+        r.resource_fk_id AS resourceFkId,
+        r.platform_type AS platformType
+        FROM
+        tb_resource r
+        WHERE
+       tenant_id=#{tenantId} and permission=#{resource.permission}
+       <if test="resource.fkParentId == null">
+         and fk_parent_id is null
+       </if>
+        <if test="resource.value == null">
+            and value is null
+        </if>
+       and type=#{resource.type}
+    </select>
+
+    <select id="getByFkId" resultType="com.gok.pboot.auth.Resource">
+        SELECT
+        r.id AS "id",
+        r.icon AS "icon",
+        r.name AS "name",
+        r.component,
+        r.permission AS "permission",
+        r.remark AS "remark",
+        r.sort AS "sort",
+        r.type AS "type",
+        r.value AS "value",
+        r.fk_parent_id AS "fkParentId",
+        r.resource_fk_id AS resourceFkId,
+        r.platform_type AS platformType
+        FROM
+        tb_resource r
+        WHERE resource_fk_id=#{id}
+    </select>
+    <update id="updateByFkEntity">
+        update tb_resource set name=#{resource.name},type=#{resource.type},permission=#{resource.permission},value=#{resource.value},platform_type=#{resource.platformType}
+           ,sort=#{resource.sort}
+             where resource_fk_id=#{resource.id}
+    </update>
+</mapper>

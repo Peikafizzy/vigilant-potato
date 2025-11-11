@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.gok</groupId>
+	<artifactId>xt-back</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>xt-back</name>
+	<modules>
+		<module>xt-service</module>
+		<module>gateway</module>
+	</modules>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+		<spring.cloud.version>Greenwich.SR1</spring.cloud.version>
+		<spring.boot.version>2.1.3.RELEASE</spring.boot.version>
+		<slf4j.version>1.7.12</slf4j.version>
+		<mysql.version>8.0.11</mysql.version>
+		<druid.version>1.1.9</druid.version>
+		<java-jwt.version>3.0.2</java-jwt.version>
+		<fastjson.version>1.2.51</fastjson.version>
+		<guava.version>20.0</guava.version>
+		<common-lang.version>3.3.2</common-lang.version>
+		<mybatis.plus.version>2.0.5</mybatis.plus.version>
+		<mybatis-starter-version>1.2.0</mybatis-starter-version>
+		<beetl.version>2.7.27</beetl.version>
+		<activiti.version>5.22.0</activiti.version>
+		<jwt.version>3.2.0</jwt.version>
+		<flowable.version>6.2.1</flowable.version>
+		<shiro.version>1.4.0</shiro.version>
+		<ehcache.version>2.10.3</ehcache.version>
+		<tomcat.embeded.version>8.0.50</tomcat.embeded.version>
+		<freemarker.version>2.3.28</freemarker.version>
+		<fluent.validator.version>1.0.9</fluent.validator.version>
+		<resteasy.version>3.0.16.Final</resteasy.version>
+		<protostuff.version>1.6.0</protostuff.version>
+		<activiti.version>6.0.0</activiti.version>
+		<httpclient.version>4.5.3</httpclient.version>
+		<poi.version>3.17</poi.version>
+		<spring-cloud.version>Greenwich.SR1</spring-cloud.version>
+		<cost.version>0.0.1-SNAPSHOT</cost.version>
+	</properties>
+
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+			<version>0.2.1.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba.cloud</groupId>
+			<artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.junit.vintage</groupId>
+					<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-undertow</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.2</version>
+			<scope>compile</scope>
+		</dependency>
+
+	</dependencies>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.0</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<compilerArguments>
+						<bootclasspath>${java.home}/lib/rt.jar${path.separator}${java.home}/lib/jce.jar</bootclasspath>
+					</compilerArguments>
+					<basedir/>
+					<buildDirectory/>
+					<outputDirectory/>
+					<projectArtifact/>
+				</configuration>
+			</plugin>
+			<!--防止jks文件被mavne编译导致不可用-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<configuration>
+					<nonFilteredFileExtensions>
+						<nonFilteredFileExtension>cert</nonFilteredFileExtension>
+						<nonFilteredFileExtension>jks</nonFilteredFileExtension>
+					</nonFilteredFileExtensions>
+					<outputDirectory/>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+
+	<profiles>
+		<!-- 开发环境 -->
+		<profile>
+			<id>dev</id>
+			<properties>
+				<gok-env>dev</gok-env>
+			</properties>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<profile>
+			<id>test</id>
+			<properties>
+				<gok-env>test</gok-env>
+			</properties>
+		</profile>
+		<profile>
+			<id>st</id>
+			<properties>
+				<gok-env>st</gok-env>
+			</properties>
+		</profile>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<gok-env>prod</gok-env>
+			</properties>
+		</profile>
+	</profiles>
+
+</project>
