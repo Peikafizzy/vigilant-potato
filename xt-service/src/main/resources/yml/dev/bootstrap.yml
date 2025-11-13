@@ -13,5 +13,118 @@ spring:
         refresh:
           enabled: false
         group: gok-base-cloud
+      discovery:
+        server-addr: 127.0.0.1:8848
+        service: hdys-service
+        namespace: public
+        cluster-name: DEFAULT
   profiles:
     active: dev
+  devtools:
+    restart:
+      enable: false
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    timeout: 20000
+    password: 123456
+    lettuce:
+      pool:
+        max-active: 16
+        max-idle: 2
+        min-idle: 16
+        max-wait: 5000
+        test-on-borrow: true
+        test-while-idle: true
+    so-timeout: 5000
+    connection-timeout: 20000
+    key:
+      loginLock: some-value
+
+    datasource:
+      type: com.alibaba.druid.pool.DruidDataSource
+      druid:
+        url: jdbc:mysql://127.0.0.1:3306/nacos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+        username: root
+        password: 123456
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        validation-query: SELECT 1
+        test-while-idle: true
+        test-on-borrow: false
+        test-on-return: false
+        initial-size: 5
+        min-idle: 5
+        max-active: 20
+        max-wait: 60000
+        time-between-eviction-runs-millis: 60000
+        min-evictable-idle-time-millis: 300000
+        filters: stat
+        stat-view-servlet:
+          enabled: true
+          url-pattern: /druid/*
+          reset-enable: true
+        filter:
+          config:
+            enabled: true
+        type: com.alibaba.druid.pool.DruidDataSource
+        cache:
+          type: redis
+    liquibase:
+      enabled: true
+      change-log: classpath:/liquibase/master.xml
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml   # optional if you have XML mappers
+  type-aliases-package: com.example.model
+  global-config:
+    db-config:
+      d-type: auto
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+sys:
+  resource-tenant-id: 1
+  admin-id: 5
+  landlord-id: 0
+  landlord-no: 0
+  login:
+    lock-time: 3600
+    error-limit: 5
+    error-cache-time: 1800
+    #是否启动手机短信校验
+    phone-verify-code-enable: false
+  snowflake:
+    #机器id的过期时间
+    expires-time: 86400
+
+  servlet:
+    multipart:
+      max-request-size: 500MB
+      max-file-size: 300MB
+      location: /data/tempuploadfiles
+logging:
+  config: classpath:logConfig/logback_dev.xml
+
+token:
+  access-token-validity-seconds: 18000
+  refresh-token-validity-seconds: 18000
+doc:
+  enable-type: local
+  local:
+    path: /local
+    absolute: D:/project/hi-back/data/tempuploadfiles
+
+temporaryFile:
+  url: D:/webroot/test/
+
+ali:
+  aliSmsTemplate:
+    commonPhoneCode:
+      TemplateCode: SMS_302802198
+      signName: 先峰时空信息技术研究院
+    noticeMessage:
+      TemplateCode: SMS_473755231
+      signName: 先峰时空信息技术研究院
+  sms:
+    regionId: cn-shenzhen
+    connTimeout: 1000
+    readTimeout: 1000
+    region: dysmsapi.aliyuncs.com

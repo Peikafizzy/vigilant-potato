@@ -1,5 +1,6 @@
 server:
   max-http-header-size: 51200
+  port: 8080
 spring:
   application:
     name: xt-service
