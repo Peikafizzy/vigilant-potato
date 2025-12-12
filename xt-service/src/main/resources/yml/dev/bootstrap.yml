@@ -1,5 +1,5 @@
 server:
-  port: 7050
+  port: 8080
 spring:
   application:
     name: xt-service
@@ -15,7 +15,7 @@ spring:
         group: gok-base-cloud
       discovery:
         server-addr: 127.0.0.1:8848
-        service: hdys-service
+        service: xt-service
         namespace: public
         cluster-name: DEFAULT
   profiles:
@@ -41,37 +41,39 @@ spring:
     key:
       loginLock: some-value
 
-    datasource:
-      type: com.alibaba.druid.pool.DruidDataSource
-      druid:
-        url: jdbc:mysql://127.0.0.1:3306/nacos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-        username: root
-        password: 123456
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        validation-query: SELECT 1
-        test-while-idle: true
-        test-on-borrow: false
-        test-on-return: false
-        initial-size: 5
-        min-idle: 5
-        max-active: 20
-        max-wait: 60000
-        time-between-eviction-runs-millis: 60000
-        min-evictable-idle-time-millis: 300000
-        filters: stat
-        stat-view-servlet:
-          enabled: true
-          url-pattern: /druid/*
-          reset-enable: true
-        filter:
-          config:
+  datasource:
+    hikari:
+      initialization-fail-timeout: 0
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: jdbc:mysql://127.0.0.1:3306/nacos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      username: root
+      password: 123456
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      filters: stat
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        reset-enable: true
+      filter:
+        config:
             enabled: true
-        type: com.alibaba.druid.pool.DruidDataSource
-        cache:
-          type: redis
-    liquibase:
-      enabled: true
-      change-log: classpath:/liquibase/master.xml
+      cache:
+        type: redis
+  liquibase:
+    enabled: true
+    change-log: classpath:/liquibase/master.xml
+
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml   # optional if you have XML mappers
   type-aliases-package: com.example.model
@@ -102,7 +104,6 @@ sys:
       location: /data/tempuploadfiles
 logging:
   config: classpath:logConfig/logback_dev.xml
-
 token:
   access-token-validity-seconds: 18000
   refresh-token-validity-seconds: 18000

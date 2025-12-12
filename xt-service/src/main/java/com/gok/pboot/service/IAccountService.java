@@ -550,4 +550,6 @@ public interface IAccountService {
      * @return java.lang.Integer
      */
     Integer getCountByPhone(Account account);
+
+
 }

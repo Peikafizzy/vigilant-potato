@@ -23,17 +23,19 @@ import com.gok.pboot.enumeration.entity.UserType;
 import com.gok.pboot.service.IAccountService;
 import com.gok.pboot.service.impl.UserDetailsServiceImpl;
 import com.google.common.collect.Lists;
+import com.gok.pboot.entity.UserAccount;
+import com.gok.pboot.service.IUserAccountService;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.ehcache.xml.model.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +44,43 @@ import java.util.stream.Collectors;
  * @author funcas
  * @version 1.0
  * @date 2018年10月12日
+ * | HTTP + Path                                  | Purpose / What it likely does                                                                        |
+ * | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+ * | **POST /sys/userinfo**                       | Get the info of the currently authenticated user (user profile + permissions / resources)            |
+ * | **GET /sys/users**                           | Get a list of users (with pagination / filter)                                                       |
+ * | **GET /sys/userByUnit/{unitId}**             | Get list of users filtered by a “unit” (organization unit), using path parameter `unitId`            |
+ * | **GET /sys/getUserByUnit**                   | Another version — get users by unit + tenantId via query parameters (`unitId`, `tenantId`)           |
+ * | **GET /sys/user/{userId}**                   | Get a single user’s info by their `userId`                                                           |
+ * | **GET /sys/user/checkUser**                  | Check account info (by username & phone) — maybe for verifying user identity / recovery / validation |
+ * | **GET /sys/user/getAccountByUserNameExpose** | Get account details by username (exposed endpoint)                                                   |
+ * | **POST /sys/user**                           | Create a new user (or save a user) — `@RequestBody User user`                                        |
+ * | **POST /sys/updateUserOnly**                 | Update user info only (without maybe roles/permissions)                                              |
+ * | **POST /sys/user/updateTenantPhone**         | Update tenant (organization) phone — some special permission/update action                           |
+ * | **POST /sys/saveAdminUser**                  | Create or save an “admin” user (special privileges)                                                  |
+ * | **POST /sys/user/list**                      | Search or list users based on some filter (body is `UserSearchVO`)                                   |
+ * | **POST /sys/user/list/Expose**               | Similar to above, maybe a variant with looser permissions or less filtering                          |
+ * | **POST /sys/user/listToMap**                 | Get list of users and return as a Map keyed by user ID (transformed result)                          |
+ * | **DELETE /sys/user**                         | Batch delete users logically (by list of IDs) — “delete user(s)” action                              |
+ * | **POST /sys/user/getUsersByIdList**          | Get multiple users by a list of IDs — batch fetch                                                    |
+ * | **POST /sys/user/getUsersByGroup**           | Get users belonging to certain group(s) (by group ID set)                                            |
+ * | **GET /sys/user/getUsersByIdList**           | Another batch-fetch endpoint (maybe for operations) by ID range (`begin`, `end`)                     |
+ * | **GET /sys/getAccountById/{id}**             | Get account info by account ID                                                                       |
+ * | **GET /sys/getAccountByPhone/{phone}**       | Get account info by phone number                                                                     |
+ * | **POST /sys/user/insertBatch**               | Insert many users at once (bulk create)                                                              |
+ * | **POST /sys/user/insertBatchExpose**         | Another version of bulk insert, maybe exposed differently                                            |
+ * | **POST /sys/saveAccount**                    | Save a new account (not necessarily user) — perhaps registration or account creation                 |
+ * | **GET /sys/countTenantId/{accountId}**       | Count or fetch the number of tenants associated with an account (by account ID)                      |
+ * | **POST /sys/getByPhoneList**                 | Get accounts/users by a list of phone numbers (batch lookup)                                         |
+ * | **POST /sys/switchType**                     | Switch a user’s type (role / classification) — maybe student ↔ teacher etc.                          |
+ * | **POST /sys/updateState**                    | Update user state (e.g. active/inactive, enable/disable)                                             |
+ * | **POST /sys/updatePassword/first**           | First phase of password update (for user resetting password, verifying phone or account)             |
+ * | **POST /sys/updatePassword/second**          | Second phase of password update (actually set new password)                                          |
+ * | **POST /sys/checkPassword**                  | Check if provided credentials/password matches (maybe for change password / verification)            |
+ * | **POST /sys/updatePhone**                    | Update user phone number                                                                             |
+ * | **POST /sys/findByUserFilter**               | Search users by some filter object (User fields)                                                     |
+ * | **POST /sys/findByUserFilterExpose**         | Same as above but maybe “public/exposed” version (less restrictions)                                 |
+ * | **POST /sys/findByPhoneList**                | Find users by list of phone numbers (batch search)                                                   |
+ * | **POST /sys/getUserMapByAccountIdList**      | Get a map of users keyed by account IDs from a `UserSearchVO` request                                |
  */
 @RestController
 @RequestMapping("/sys")
@@ -49,13 +88,10 @@ import java.util.stream.Collectors;
 public class UserController extends BaseController {
 
     private final IAccountService accountService;
-
-
     @Autowired
     public UserController(IAccountService accountService) {
         this.accountService = accountService;
     }
-
     /**
      * 获取登陆用户信息接口
      *
@@ -82,7 +118,7 @@ public class UserController extends BaseController {
         log.info("输出权限：{}", perms);
         user.setPerms(perms);
         user.setResourceList(userResourceList);
-//        user.setWeakPwd(userVo.getWeakPwd());
+        user.setWeakPwd(userVo.getWeakPwd());
         if (UserType.PARENTS.getValue().equals(user.getType())) {
             user.setParentsId(user.getId());
             user.setId(user.getDefStudent());
@@ -98,7 +134,7 @@ public class UserController extends BaseController {
      * @return
      */
     @GetMapping("/users")
-//    //@PreAuthorize("hasAuthority('user:list')")
+    //@PreAuthorize("hasAuthority('user:list')")
     public ApiResult getUserLists(PageRequest pageRequest, User user) {
         log.info("测试");
         Map<String, Object> filter = JSONObject.parseObject(JSON.toJSONString(user));
@@ -439,7 +475,6 @@ public class UserController extends BaseController {
         return success(1);
     }
 
-
     @PostMapping("/checkPassword")
     public ApiResult<Boolean> checkPassword(@RequestBody RegisterVO vo) {
         return ApiResult.success(accountService.checkPassword(vo));
@@ -470,6 +505,4 @@ public class UserController extends BaseController {
     public ApiResult getUserMapByAccountIdList(UserSearchVO vo) {
         return success(accountService.getUserMapByAccountIdList(vo));
     }
-
-
 }

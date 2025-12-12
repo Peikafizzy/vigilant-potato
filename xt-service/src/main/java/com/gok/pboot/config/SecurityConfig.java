@@ -55,7 +55,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     }
 
-
     /***
      * 下面这段开启，可以使用Web方式的cas
      * @param web

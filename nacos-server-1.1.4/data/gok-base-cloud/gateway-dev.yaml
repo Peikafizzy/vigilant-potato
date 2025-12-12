@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: dev
   servlet:
     multipart:
       max-file-size: 10MB # 单个数据的大小
@@ -15,22 +17,21 @@ spring:
     port: 6379
     lettuce:
       pool:
-        #jedis2.4以後失效
         max-active: 200
         max-idle: 50
         max-wait: -1
         max-total: 200
-        #是否在从池中取出连接前进行检验,如果检验失败,则从池中去除连接并尝试取出另一个
         test-on-borrow: true
-        #在空闲时检查有效性, 默认false
         test-while-idle: true
     timeout: 15000
     so-timeout: 5000
     connection-timeout: 20000
+    key:
+      loginLock: some-value
+
 zuul:
   ignored-headers: Access-Control-Allow-Credentials, Access-Control-Allow-Origin
   sensitive-headers: Access-Control-Allow-Origin
-  #    ignored-headers: Access-Control-Allow-Origin,H-APP-Id,Token,APPToken
   routes:
     se-service:
       path: /se-service/**

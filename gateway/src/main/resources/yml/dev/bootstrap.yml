@@ -1,8 +1,18 @@
 server:
   port: 7999
+
 spring:
+  profiles:
+    active: dev
   application:
-    name: gateway
+    name: xt-service
+  main:
+    allow-bean-definition-overriding: true
+  servlet:
+    multipart:
+      max-file-size: 10MB # 单个数据的大小
+      max-request-size: 20MB # 总数据的大小
+      location: /data/tempuploadfiles
   cloud:
     nacos:
       config:
@@ -11,5 +21,82 @@ spring:
         refresh:
           enabled: false
         group: gok-base-cloud
-  profiles:
-    active: dev
+      discovery:
+        server-addr: 127.0.0.1:8848
+        service: xt-service
+        namespace: public
+        cluster-name: DEFAULT
+  devtools:
+    restart:
+      enable: false
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    timeout: 20000
+    password: 123456
+    lettuce:
+      pool:
+        max-active: 16
+        max-idle: 2
+        min-idle: 16
+        max-wait: 5000
+        test-on-borrow: true
+        test-while-idle: true
+    so-timeout: 5000
+    connection-timeout: 20000
+    key:
+      loginLock: some-value
+
+zuul:
+  ignored-headers: Access-Control-Allow-Credentials, Access-Control-Allow-Origin
+  sensitive-headers: Access-Control-Allow-Origin
+  routes:
+    se-service:
+      path: /se-service/**
+      sensitiveHeaders:
+      serviceId: se-service
+  add-proxy-headers: true
+  host:
+    connect-timeout-millis: 120000
+    socket-timeout-millis: 120000
+    max-total-connections: 20000
+    max-per-route-connections: 20000
+  semaphore:
+    max-semaphores: 200
+  retryable: true
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 120000
+
+ribbon:
+  ConnectTimeout: 120000
+  ReadTimeout: 120000
+  MaxAutoRetries: 2
+  MaxAutoRetriesNextServer: 0
+  OkToRetryOnAllOperations: true
+
+proxy:
+  auth:
+    load-balanced: true
+
+logging:
+  config: classpath:logConfig/logback_dev.xml
+
+cors:
+  #域名拦截
+  allowedOrigins:
+    - "*"
+sys:
+  snowflake:
+    #机器id的过期时间
+    expires-time: 86400
+
+#不需要校验的uri集合
+access:
+  ignoreList:
+    - "/hi-service/oauth/token"
